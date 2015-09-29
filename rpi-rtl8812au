@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+# REQUIRES: git, make, gcc
+
+set -o nounset
+set -o errexit
+
+DRIVER_PATH="/lib/modules/$(uname -r)/kernel/drivers/net/wireless/8812au.ko"
+DRIVER_FILE=$(basename "${DRIVER_PATH}")
+
+
+echo "Checking online version ..."
+DKMS=$(wget https://raw.githubusercontent.com/gnab/rtl8812au/master/dkms.conf -qq -O -)
+DKMS_NAME=$(echo "${DKMS}" | grep "PACKAGE_NAME" | sed -n "s/.*=\(.*\)/\1/p")
+DKMS_VER=$(echo "${DKMS}" | grep "PACKAGE_VERSION" | sed -n "s/.*=\(.*\)/\1/p")
+echo "   ${DKMS_NAME}-${DKMS_VER}"
+
+echo "Checking for installed driver ..."
+if [ -e "${DRIVER_PATH}" ]; then
+	echo "   ${DRIVER_PATH}"
+	CURR_VER=$(modinfo "${DRIVER_FILE%.*}" | grep "^version:" | sed -n "s/.*v\([0-9]\+\.[0-9]\+\.[0-9]\+\).*/\1/p")
+	if [ "${CURR_VER}" != "${DKMS_VER}" ]; then
+		echo "   v${DKMS_VER} != v${CURR_VER}, removing old version ..."
+		sudo rmmod "${DRIVER_FILE%.*}"
+		sudo rm -f "${DRIVER_PATH}"
+	else
+		echo "   v${DKMS_VER} == v${CURR_VER}, no updates available"
+		echo ""
+		exit 0
+	fi
+else
+	echo "   Did not find any driers"
+fi
+echo ""
+
+echo "Cloning from git ..."
+cd /usr/src
+sudo rm -rf "${DKMS_NAME}-${DKMS_VER}" > /dev/null
+sudo git clone --quiet --depth 1 https://github.com/gnab/rtl8812au.git "${DKMS_NAME}-${DKMS_VER}" > /dev/null
+if [ -e "${DKMS_NAME}-${DKMS_VER}" ]; then
+	echo "Running make ..."
+	cd "${DKMS_NAME}-${DKMS_VER}"
+	sudo sed -i "s/CONFIG_PLATFORM_I386_PC = y/CONFIG_PLATFORM_I386_PC = n/" Makefile > /dev/null
+	sudo sed -i "s/CONFIG_PLATFORM_ARM_RPI = n/CONFIG_PLATFORM_ARM_RPI = y/" Makefile > /dev/null
+	sudo make > /dev/null
+	if [ -e "${DRIVER_FILE}" ]; then
+		echo "   Installing ..."
+		sudo cp "${DRIVER_FILE}" "${DRIVER_PATH}"
+		sudo depmod
+		sudo modprobe "${DRIVER_FILE%.*}"
+		MODPR=$(lsmod | grep "^${DRIVER_FILE%.*}")
+		if [ "${MODPR}" == "" ]; then
+			echo "      Install failed"
+		fi
+	else
+		echo "   Build failed"
+	fi
+else
+	echo "   Git clone failed"
+fi
+echo ""
