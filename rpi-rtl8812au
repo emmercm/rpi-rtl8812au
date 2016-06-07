@@ -13,7 +13,8 @@ echo "Checking online version ..."
 DKMS=$(wget https://raw.githubusercontent.com/gnab/rtl8812au/master/dkms.conf -qq -O -)
 DKMS_NAME=$(echo "${DKMS}" | grep "PACKAGE_NAME" | sed -n "s/.*=\(.*\)/\1/p")
 DKMS_VER=$(echo "${DKMS}" | grep "PACKAGE_VERSION" | sed -n "s/.*=\(.*\)/\1/p")
-echo "   ${DKMS_NAME}-${DKMS_VER}"
+echo "   ${DKMS_VER}"
+echo ""
 
 echo "Checking for installed driver ..."
 if [ -e "${DRIVER_PATH}" ]; then
@@ -33,13 +34,20 @@ else
 fi
 echo ""
 
+echo "Checking rtl8812au HEAD version ..."
+GIT_BRANCH=$(wget https://api.github.com/repos/gnab/rtl8812au -qq -O - | sed -n "s/.*\"default_branch\": \"\([^\"]\+\)\".*/\1/p")
+GIT_HEAD=$(wget https://api.github.com/repos/gnab/rtl8812au/git/refs/heads/${GIT_BRANCH} -qq -O - | sed -n "s/.*\"sha\": \"\([^\"]\+\)\".*/\1/p")
+echo "   ${GIT_HEAD:-NONE?}"
+echo ""
+DRIVER_DIR="rtl8812au-${GIT_HEAD:0:7}"
+
 echo "Cloning from git ..."
 cd /usr/src
-sudo rm -rf "${DKMS_NAME}-${DKMS_VER}" > /dev/null
-sudo git clone --quiet --depth 1 https://github.com/gnab/rtl8812au.git "${DKMS_NAME}-${DKMS_VER}" > /dev/null
-if [ -e "${DKMS_NAME}-${DKMS_VER}" ]; then
+sudo rm -rf "${DRIVER_DIR}" > /dev/null
+sudo git clone --quiet --depth 1 https://github.com/gnab/rtl8812au.git "${DRIVER_DIR}" > /dev/null
+if [ -e "${DRIVER_DIR}" ]; then
 	echo "Running make ..."
-	cd "${DKMS_NAME}-${DKMS_VER}"
+	cd "${DRIVER_DIR}"
 	sudo sed -i "s/CONFIG_PLATFORM_I386_PC = y/CONFIG_PLATFORM_I386_PC = n/" Makefile > /dev/null
 	sudo sed -i "s/CONFIG_PLATFORM_ARM_RPI = n/CONFIG_PLATFORM_ARM_RPI = y/" Makefile > /dev/null
 	sudo make > /dev/null
@@ -49,7 +57,9 @@ if [ -e "${DKMS_NAME}-${DKMS_VER}" ]; then
 		sudo depmod
 		sudo modprobe "${DRIVER_FILE%.*}"
 		MODPR=$(lsmod | grep "^${DRIVER_FILE%.*}")
-		if [ "${MODPR}" == "" ]; then
+		if [ "${MODPR}" != "" ]; then
+			echo "      Install succeeded"
+		else
 			echo "      Install failed"
 		fi
 	else
