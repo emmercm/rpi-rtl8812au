@@ -17,10 +17,10 @@ echo "   ${DKMS_VER}"
 echo ""
 
 echo "Checking for installed driver ..."
-if [ -e "${DRIVER_PATH}" ]; then
+if [[ -e "${DRIVER_PATH}" ]]; then
 	echo "   ${DRIVER_PATH}"
 	CURR_VER=$(modinfo "${DRIVER_FILE%.*}" | grep "^version:" | sed -n "s/.*v\([0-9]\+\.[0-9]\+\.[0-9]\+\).*/\1/p")
-	if [ "${CURR_VER}" != "${DKMS_VER}" ]; then
+	if [[ "${CURR_VER}" != "${DKMS_VER}" ]]; then
 		echo "   v${DKMS_VER} != v${CURR_VER}, removing old version ..."
 		sudo rmmod "${DRIVER_FILE%.*}"
 		sudo rm -f "${DRIVER_PATH}"
@@ -45,19 +45,19 @@ echo "Cloning from git ..."
 cd /usr/src
 sudo rm -rf "${DRIVER_DIR}" > /dev/null
 sudo git clone --quiet --depth 1 https://github.com/gnab/rtl8812au.git "${DRIVER_DIR}" > /dev/null
-if [ -e "${DRIVER_DIR}" ]; then
+if [[ -e "${DRIVER_DIR}" ]]; then
 	echo "Running make ..."
 	cd "${DRIVER_DIR}"
 	sudo sed -i "s/CONFIG_PLATFORM_I386_PC = y/CONFIG_PLATFORM_I386_PC = n/" Makefile > /dev/null
 	sudo sed -i "s/CONFIG_PLATFORM_ARM_RPI = n/CONFIG_PLATFORM_ARM_RPI = y/" Makefile > /dev/null
 	sudo make > /dev/null
-	if [ -e "${DRIVER_FILE}" ]; then
+	if [[ -e "${DRIVER_FILE}" ]]; then
 		echo "   Installing ..."
 		sudo cp "${DRIVER_FILE}" "${DRIVER_PATH}"
 		sudo depmod
 		sudo modprobe "${DRIVER_FILE%.*}"
 		MODPR=$(lsmod | grep "^${DRIVER_FILE%.*}")
-		if [ "${MODPR}" != "" ]; then
+		if [[ "${MODPR}" != "" ]]; then
 			echo "      Install succeeded"
 		else
 			echo "      Install failed"
