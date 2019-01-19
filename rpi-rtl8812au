@@ -49,7 +49,7 @@ if [[ -e "${DRIVER_DIR}" ]]; then
 	cd "${DRIVER_DIR}"
 	sudo sed -i "s/CONFIG_PLATFORM_I386_PC = y/CONFIG_PLATFORM_I386_PC = n/" Makefile > /dev/null
 	sudo sed -i "s/CONFIG_PLATFORM_ARM_RPI = n/CONFIG_PLATFORM_ARM_RPI = y/" Makefile > /dev/null
-	sudo make > /dev/null
+	sudo make -j$(nproc) > /dev/null
 	if [[ -e "${DRIVER_FILE}" ]]; then
 		echo "   Installing ..."
 		sudo cp "${DRIVER_FILE}" "${DRIVER_PATH}"
