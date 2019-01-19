@@ -11,7 +11,6 @@ DRIVER_FILE=$(basename "${DRIVER_PATH}")
 
 echo "Checking online version ..."
 DKMS=$(wget https://raw.githubusercontent.com/gnab/rtl8812au/master/dkms.conf -qq -O -)
-DKMS_NAME=$(echo "${DKMS}" | grep "PACKAGE_NAME" | sed -n "s/.*=\(.*\)/\1/p")
 DKMS_VER=$(echo "${DKMS}" | grep "PACKAGE_VERSION" | sed -n "s/.*=\(.*\)/\1/p")
 echo "   ${DKMS_VER}"
 echo ""
