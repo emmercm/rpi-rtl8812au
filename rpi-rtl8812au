@@ -38,13 +38,12 @@ GIT_BRANCH=$(wget https://api.github.com/repos/gnab/rtl8812au -qq -O - | sed -n 
 GIT_HEAD=$(wget https://api.github.com/repos/gnab/rtl8812au/git/refs/heads/${GIT_BRANCH} -qq -O - | sed -n "s/.*\"sha\": \"\([^\"]\+\)\".*/\1/p")
 echo "   ${GIT_HEAD:-NONE?}"
 echo ""
-DRIVER_DIR="rtl8812au-${GIT_HEAD:0:7}"
+DRIVER_DIR="/sr/src/rtl8812au-${GIT_HEAD:0:7}"
 
-echo "Cloning from git ..."
-cd /usr/src
+echo "Cloning from git to ${DRIVER_DIR} ..."
 sudo rm -rf "${DRIVER_DIR}" > /dev/null
 sudo git clone --quiet --depth 1 https://github.com/gnab/rtl8812au.git "${DRIVER_DIR}" > /dev/null
-if [[ -e "${DRIVER_DIR}" ]]; then
+if [[ -e "${DRIVER_DIR}/Makefile" ]]; then
 	echo "Running make ..."
 	cd "${DRIVER_DIR}"
 	sudo sed -i "s/CONFIG_PLATFORM_I386_PC = y/CONFIG_PLATFORM_I386_PC = n/" Makefile > /dev/null
